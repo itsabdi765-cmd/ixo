@@ -2,6 +2,8 @@ import discord
 from google import genai
 from google.genai import types
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -13,6 +15,20 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 chat_histories = {}
+
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"alive")
+    def log_message(self, format, *args):
+        pass
+
+def run_server():
+    server = HTTPServer(("0.0.0.0", 8080), PingHandler)
+    server.serve_forever()
+
+threading.Thread(target=run_server, daemon=True).start()
 
 @client.event
 async def on_ready():
@@ -30,7 +46,7 @@ async def on_message(message):
             channel_id = message.channel.id
             if channel_id not in chat_histories:
                 chat_histories[channel_id] = []
-            
+
             chat_histories[channel_id].append(
                 types.Content(role="user", parts=[types.Part(text=f"{message.author.display_name}: {message.content}")])
             )
