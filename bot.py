@@ -1,15 +1,12 @@
 import discord
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash",
-    system_instruction="you are a chill funny discord bot. talk casually like a gen z person, lowercase only, short responses, like texting a friend. don't be cringe or try too hard."
-)
+client_ai = genai.Client(api_key=GEMINI_API_KEY)
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -32,10 +29,26 @@ async def on_message(message):
         try:
             channel_id = message.channel.id
             if channel_id not in chat_histories:
-                chat_histories[channel_id] = model.start_chat(history=[])
-            chat = chat_histories[channel_id]
-            response = chat.send_message(f"{message.author.display_name}: {message.content}")
-            await message.channel.send(response.text)
+                chat_histories[channel_id] = []
+            
+            chat_histories[channel_id].append(
+                types.Content(role="user", parts=[types.Part(text=f"{message.author.display_name}: {message.content}")])
+            )
+
+            response = client_ai.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=chat_histories[channel_id],
+                config=types.GenerateContentConfig(
+                    system_instruction="you are a chill funny discord bot. talk casually like a gen z person, lowercase only, short responses, like texting a friend. don't be cringe or try too hard."
+                )
+            )
+
+            reply = response.text
+            chat_histories[channel_id].append(
+                types.Content(role="model", parts=[types.Part(text=reply)])
+            )
+
+            await message.channel.send(reply)
         except Exception as e:
             await message.channel.send("ugh something broke lol try again")
             print(f"error: {e}")
