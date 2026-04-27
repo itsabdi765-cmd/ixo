@@ -8,10 +8,14 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+print(f"token loaded: {bool(DISCORD_TOKEN)}")
+print(f"gemini key loaded: {bool(GEMINI_API_KEY)}")
+
 client_ai = genai.Client(api_key=GEMINI_API_KEY)
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.messages = True
 client = discord.Client(intents=intents)
 
 chat_histories = {}
@@ -33,14 +37,18 @@ threading.Thread(target=run_server, daemon=True).start()
 @client.event
 async def on_ready():
     print(f"online as {client.user}")
+    print(f"in {len(client.guilds)} servers")
 
 @client.event
 async def on_message(message):
+    print(f"message received from {message.author}: {message.content[:50]}")
     if message.author == client.user:
         return
     if client.user not in message.mentions:
+        print("not mentioned, ignoring")
         return
 
+    print("bot was mentioned, calling gemini...")
     async with message.channel.typing():
         try:
             channel_id = message.channel.id
