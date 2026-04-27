@@ -1,3 +1,5 @@
+import sys
+sys.stdout.reconfigure(line_buffering=True)
 import discord
 from google import genai
 from google.genai import types
