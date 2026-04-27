@@ -4,7 +4,6 @@ import os
 
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID"))
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel(
@@ -26,14 +25,15 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
-    if message.channel.id != CHANNEL_ID:
+    if client.user not in message.mentions:
         return
 
     async with message.channel.typing():
         try:
-            if CHANNEL_ID not in chat_histories:
-                chat_histories[CHANNEL_ID] = model.start_chat(history=[])
-            chat = chat_histories[CHANNEL_ID]
+            channel_id = message.channel.id
+            if channel_id not in chat_histories:
+                chat_histories[channel_id] = model.start_chat(history=[])
+            chat = chat_histories[channel_id]
             response = chat.send_message(f"{message.author.display_name}: {message.content}")
             await message.channel.send(response.text)
         except Exception as e:
